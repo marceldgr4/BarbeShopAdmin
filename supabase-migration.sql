@@ -19,7 +19,7 @@ create table profiles (
   phone           text,
   avatar_url      text,
   role            user_role not null default 'client',
-  barbershop_id   uuid,    -- FK added after barbershops table
+  branch_id   uuid,    -- FK added after branches table
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -44,81 +44,68 @@ create trigger on_auth_user_created
 
 -- ── Barbershops ───────────────────────────────────────────────────────────────
 
-create table barbershops (
+create table branches (
   id              uuid primary key default uuid_generate_v4(),
   name            text not null,
-  description     text,
   address         text not null,
-  city            text not null,
   phone           text not null,
   email           text,
   latitude        numeric(9,6),
   longitude       numeric(9,6),
-  opening_time    time not null default '09:00',
-  closing_time    time not null default '20:00',
   is_active       boolean not null default true,
-  cover_image_url text,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
 
--- Add FK from profiles to barbershops
+-- Add FK from profiles to branches
 alter table profiles
   add constraint fk_profile_barbershop
-  foreign key (barbershop_id) references barbershops(id) on delete set null;
+  foreign key (branch_id) references branches(id) on delete set null;
 
 -- Indexes for geosearch and text search
-create index idx_barbershops_city on barbershops(city);
-create index idx_barbershops_is_active on barbershops(is_active);
-create index idx_barbershops_location on barbershops(latitude, longitude);
-create index idx_barbershops_name_trgm on barbershops using gin(name gin_trgm_ops);
+create index idx_branches_is_active on branches(is_active);
+create index idx_branches_location on branches(latitude, longitude);
+create index idx_branches_name_trgm on branches using gin(name gin_trgm_ops);
 
 -- ── Barbers ───────────────────────────────────────────────────────────────────
 
 create table barbers (
   id              uuid primary key default uuid_generate_v4(),
-  user_id         uuid not null references profiles(id) on delete cascade,
-  barbershop_id   uuid not null references barbershops(id) on delete cascade,
-  full_name       text not null,
+  branch_id       uuid not null references branches(id) on delete cascade,
+  name            text not null,
   bio             text,
-  specialties     text[] not null default '{}',
-  avatar_url      text,
-  rating          numeric(3,2) not null default 0 check (rating >= 0 and rating <= 5),
-  review_count    integer not null default 0,
+  specialty_id    uuid,
+  photo_url       text,
   is_active       boolean not null default true,
   created_at      timestamptz not null default now(),
-  updated_at      timestamptz not null default now(),
-  unique (user_id, barbershop_id)
+  updated_at      timestamptz not null default now()
 );
 
-create index idx_barbers_barbershop on barbers(barbershop_id);
+create index idx_barbers_barbershop on barbers(branch_id);
 create index idx_barbers_is_active on barbers(is_active);
 
 -- ── Services ──────────────────────────────────────────────────────────────────
 
-create table services (
+create table service_categories (
   id                uuid primary key default uuid_generate_v4(),
-  barbershop_id     uuid not null references barbershops(id) on delete cascade,
   name              text not null,
   description       text,
   duration_minutes  integer not null check (duration_minutes > 0),
   price             numeric(10,2) not null check (price >= 0),
   is_active         boolean not null default true,
-  image_url         text,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
 
-create index idx_services_barbershop on services(barbershop_id);
-create index idx_services_is_active on services(is_active);
-create index idx_services_name_trgm on services using gin(name gin_trgm_ops);
+create index idx_service_categories_is_active on service_categories(is_active);
+create index idx_service_categories_name_trgm on service_categories using gin(name gin_trgm_ops);
 
 -- ── Barber Schedules ──────────────────────────────────────────────────────────
 
 create table barber_schedules (
   id              uuid primary key default uuid_generate_v4(),
   barber_id       uuid not null references barbers(id) on delete cascade,
-  barbershop_id   uuid not null references barbershops(id) on delete cascade,
+  branch_id   uuid not null references branches(id) on delete cascade,
   weekday         smallint not null check (weekday between 0 and 6),  -- 0=Sun
   start_time      time not null,
   end_time        time not null,
@@ -167,8 +154,8 @@ create table appointments (
   id                    uuid primary key default uuid_generate_v4(),
   client_id             uuid not null references profiles(id),
   barber_id             uuid not null references barbers(id),
-  barbershop_id         uuid not null references barbershops(id),
-  service_id            uuid not null references services(id),
+  branch_id         uuid not null references branches(id),
+  service_id            uuid not null references service_categories(id),
   scheduled_at          timestamptz not null,
   duration_minutes      integer not null,
   status                appointment_status not null default 'pending',
@@ -185,7 +172,7 @@ create unique index idx_appointments_no_double_book
   where status not in ('cancelled', 'no_show');
 
 create index idx_appointments_barber_date  on appointments(barber_id, scheduled_at);
-create index idx_appointments_barbershop   on appointments(barbershop_id, scheduled_at);
+create index idx_appointments_barbershop   on appointments(branch_id, scheduled_at);
 create index idx_appointments_client       on appointments(client_id, scheduled_at);
 create index idx_appointments_status       on appointments(status);
 
@@ -196,7 +183,7 @@ create table reviews (
   appointment_id  uuid references appointments(id) on delete cascade,
   client_id       uuid not null references profiles(id),
   barber_id       uuid not null references barbers(id),
-  barbershop_id   uuid not null references barbershops(id),
+  branch_id   uuid not null references branches(id),
   rating          smallint not null check (rating between 1 and 5),
   comment         text,
   is_visible      boolean not null default true,
@@ -253,7 +240,7 @@ $$;
 -- Apply to all tables with updated_at
 do $$ declare t text;
 begin
-  for t in select unnest(array['profiles','barbershops','barbers','services','barber_schedules','appointments']) loop
+  for t in select unnest(array['profiles','branches','barbers','services','barber_schedules','appointments']) loop
     execute format('
       create trigger trg_updated_at_%s
         before update on %s
@@ -268,9 +255,9 @@ end $$;
 
 -- Enable RLS on all tables
 alter table profiles         enable row level security;
-alter table barbershops      enable row level security;
+alter table branches      enable row level security;
 alter table barbers          enable row level security;
-alter table services         enable row level security;
+alter table service_categories         enable row level security;
 alter table barber_schedules enable row level security;
 alter table barber_break_times enable row level security;
 alter table barber_days_off  enable row level security;
@@ -285,14 +272,14 @@ returns user_role language sql stable security definer as $$
 $$;
 
 -- ── Barbershops RLS ───────────────────────────────────────────────────────────
--- Anyone can read active barbershops (mobile app)
-create policy "barbershops_select_public"
-  on barbershops for select
+-- Anyone can read active branches (mobile app)
+create policy "branches_select_public"
+  on branches for select
   using (is_active = true);
 
 -- Admins can do everything
-create policy "barbershops_all_admin"
-  on barbershops for all
+create policy "branches_all_admin"
+  on branches for all
   using (current_user_role() = 'admin')
   with check (current_user_role() = 'admin');
 
@@ -316,7 +303,7 @@ create policy "services_select_public"
   on services for select
   using (is_active = true);
 
-create policy "services_all_admin"
+create policy "service_categories_all_admin"
   on services for all
   using (current_user_role() = 'admin')
   with check (current_user_role() = 'admin');
@@ -373,8 +360,8 @@ create policy "audit_logs_select_admin"
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Top services by appointment count
-create or replace function get_top_services(
-  p_barbershop_id uuid,
+create or replace function get_top_service_categories(
+  p_branch_id uuid,
   p_month_start   timestamptz,
   p_limit         integer default 5
 )
@@ -385,10 +372,10 @@ language sql stable as $$
     s.name,
     count(a.id)
   from appointments a
-  join services s on s.id = a.service_id
+  join service_categories s on s.id = a.service_id
   where a.status in ('completed', 'confirmed')
     and a.scheduled_at >= p_month_start
-    and (p_barbershop_id is null or a.barbershop_id = p_barbershop_id)
+    and (p_branch_id is null or a.branch_id = p_branch_id)
   group by s.id, s.name
   order by count(a.id) desc
   limit p_limit;
@@ -396,23 +383,23 @@ $$;
 
 -- Top barbers by appointment count + avg rating
 create or replace function get_top_barbers(
-  p_barbershop_id uuid,
+  p_branch_id uuid,
   p_month_start   timestamptz,
   p_limit         integer default 5
 )
-returns table(barber_id uuid, full_name text, appointment_count bigint, avg_rating numeric)
+returns table(barber_id uuid, name text, appointment_count bigint, avg_rating numeric)
 language sql stable as $$
   select
     b.id,
-    b.full_name,
+    b.name,
     count(a.id),
     b.rating
   from appointments a
   join barbers b on b.id = a.barber_id
   where a.status in ('completed', 'confirmed')
     and a.scheduled_at >= p_month_start
-    and (p_barbershop_id is null or a.barbershop_id = p_barbershop_id)
-  group by b.id, b.full_name, b.rating
+    and (p_branch_id is null or a.branch_id = p_branch_id)
+  group by b.id, b.name, b.rating
   order by count(a.id) desc
   limit p_limit;
 $$;
