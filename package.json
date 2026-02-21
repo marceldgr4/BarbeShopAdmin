@@ -1,0 +1,21 @@
+{
+  "name": "barbershop-admin-backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "gateway",
+    "web-admin"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w gateway\" \"npm run dev -w services/barbershops\" \"npm run dev -w services/barbers\" \"npm run dev -w services/services-svc\" \"npm run dev -w services/schedules\" \"npm run dev -w services/dashboard\" \"npm run dev -w services/appointments\" \"npm run dev -w web-admin\"",
+    "build": "npm run build --workspaces",
+    "lint": "eslint '**/*.ts' --ext .ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.2.0",
+    "typescript": "^5.4.0"
+  }
+}

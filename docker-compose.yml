@@ -1,0 +1,112 @@
+version: '3.9'
+
+services:
+  # ── API Gateway ──────────────────────────────────────────
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - BARBERSHOPS_URL=http://svc-barbershops:3001
+      - BARBERS_URL=http://svc-barbers:3002
+      - SERVICES_URL=http://svc-services:3003
+      - SCHEDULES_URL=http://svc-schedules:3004
+      - DASHBOARD_URL=http://svc-dashboard:3005
+      - APPOINTMENTS_URL=http://svc-appointments:3006
+    depends_on:
+      - svc-barbershops
+      - svc-barbers
+      - svc-services
+      - svc-schedules
+      - svc-dashboard
+      - svc-appointments
+    networks:
+      - barbershop-net
+    restart: unless-stopped
+
+  # ── Barbershops Service ───────────────────────────────────
+  svc-barbershops:
+    build:
+      context: .
+      dockerfile: services/barbershops/Dockerfile
+    env_file: .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+    networks:
+      - barbershop-net
+    restart: unless-stopped
+
+  # ── Barbers Service ───────────────────────────────────────
+  svc-barbers:
+    build:
+      context: .
+      dockerfile: services/barbers/Dockerfile
+    env_file: .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+    networks:
+      - barbershop-net
+    restart: unless-stopped
+
+  # ── Services (haircut services) ───────────────────────────
+  svc-services:
+    build:
+      context: .
+      dockerfile: services/services-svc/Dockerfile
+    env_file: .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+    networks:
+      - barbershop-net
+    restart: unless-stopped
+
+  # ── Schedules Service ─────────────────────────────────────
+  svc-schedules:
+    build:
+      context: .
+      dockerfile: services/schedules/Dockerfile
+    env_file: .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+    networks:
+      - barbershop-net
+    restart: unless-stopped
+
+  # ── Dashboard Service ─────────────────────────────────────
+  svc-dashboard:
+    build:
+      context: .
+      dockerfile: services/dashboard/Dockerfile
+    env_file: .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3005
+    networks:
+      - barbershop-net
+    restart: unless-stopped
+
+  # ── Appointments Service ──────────────────────────────────
+  svc-appointments:
+    build:
+      context: .
+      dockerfile: services/appointments/Dockerfile
+    env_file: .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3006
+    networks:
+      - barbershop-net
+    restart: unless-stopped
+
+networks:
+  barbershop-net:
+    driver: bridge
