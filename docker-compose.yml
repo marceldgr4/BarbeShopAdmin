@@ -107,6 +107,17 @@ services:
       - barbershop-net
     restart: unless-stopped
 
+  # ── Web Admin Frontend ────────────────────────────────────
+  web-admin:
+    build:
+      context: ./web-admin
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    networks:
+      - barbershop-net
+    restart: unless-stopped
+
 networks:
   barbershop-net:
     driver: bridge
