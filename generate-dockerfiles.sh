@@ -15,14 +15,15 @@ RUN npm install --workspace=gateway
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=gateway
 
+RUN npm prune --production
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/gateway/dist ./dist
-COPY --from=builder /app/gateway/package.json ./
-RUN npm install --production
 USER node
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
@@ -43,14 +44,15 @@ RUN npm install --workspace=services/barbershops
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=services/barbershops
 
+RUN npm prune --production
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/barbershops/dist ./dist
-COPY --from=builder /app/services/barbershops/package.json ./
-RUN npm install --production
 USER node
 EXPOSE 3001
 CMD ["node", "dist/index.js"]
@@ -71,14 +73,15 @@ RUN npm install --workspace=services/barbers
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=services/barbers
 
+RUN npm prune --production
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/barbers/dist ./dist
-COPY --from=builder /app/services/barbers/package.json ./
-RUN npm install --production
 USER node
 EXPOSE 3002
 CMD ["node", "dist/index.js"]
@@ -99,14 +102,15 @@ RUN npm install --workspace=services/services-svc
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=services/services-svc
 
+RUN npm prune --production
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/services-svc/dist ./dist
-COPY --from=builder /app/services/services-svc/package.json ./
-RUN npm install --production
 USER node
 EXPOSE 3003
 CMD ["node", "dist/index.js"]
@@ -127,14 +131,15 @@ RUN npm install --workspace=services/schedules
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=services/schedules
 
+RUN npm prune --production
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/schedules/dist ./dist
-COPY --from=builder /app/services/schedules/package.json ./
-RUN npm install --production
 USER node
 EXPOSE 3004
 CMD ["node", "dist/index.js"]
@@ -155,14 +160,15 @@ RUN npm install --workspace=services/dashboard
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=services/dashboard
 
+RUN npm prune --production
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/dashboard/dist ./dist
-COPY --from=builder /app/services/dashboard/package.json ./
-RUN npm install --production
 USER node
 EXPOSE 3005
 CMD ["node", "dist/index.js"]
@@ -183,14 +189,15 @@ RUN npm install --workspace=services/appointments
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=services/appointments
 
+RUN npm prune --production
+
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/services/appointments/dist ./dist
-COPY --from=builder /app/services/appointments/package.json ./
-RUN npm install --production
 USER node
 EXPOSE 3006
 CMD ["node", "dist/index.js"]

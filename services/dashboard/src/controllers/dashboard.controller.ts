@@ -5,7 +5,7 @@ import { getSupabaseAdmin, ok } from '@barbershop/shared';
 
 export async function getDashboardStats(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { barbershop_id } = req.query as Record<string, string>;
+    const { branch_id } = req.query as Record<string, string>;
     const supabase = getSupabaseAdmin();
 
     const now       = new Date();
@@ -19,25 +19,25 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
 
     // Total appointments
     let q1 = supabase.from('appointments').select('*', { count: 'exact', head: true });
-    if (barbershop_id) q1 = q1.eq('branch_id', barbershop_id);
+    if (branch_id) q1 = q1.eq('branch_id', branch_id);
     queries.push(q1);
 
     // Today
     let q2 = supabase.from('appointments').select('*', { count: 'exact', head: true })
       .eq('appointment_date', todayStr);
-    if (barbershop_id) q2 = q2.eq('branch_id', barbershop_id);
+    if (branch_id) q2 = q2.eq('branch_id', branch_id);
     queries.push(q2);
 
     // Week
     let q3 = supabase.from('appointments').select('*', { count: 'exact', head: true })
       .gte('appointment_date', weekStart.toISOString().split('T')[0]);
-    if (barbershop_id) q3 = q3.eq('branch_id', barbershop_id);
+    if (branch_id) q3 = q3.eq('branch_id', branch_id);
     queries.push(q3);
 
     // Month
     let q4 = supabase.from('appointments').select('*', { count: 'exact', head: true })
       .gte('appointment_date', monthStart.toISOString().split('T')[0]);
-    if (barbershop_id) q4 = q4.eq('branch_id', barbershop_id);
+    if (branch_id) q4 = q4.eq('branch_id', branch_id);
     queries.push(q4);
 
     // Skipping cancelled/no_show/completed counts for now because status_id is UUID
@@ -47,12 +47,12 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
 
     // Active barbers
     let q8 = supabase.from('barbers').select('*', { count: 'exact', head: true }).eq('is_active', true);
-    if (barbershop_id) q8 = q8.eq('branch_id', barbershop_id);
+    if (branch_id) q8 = q8.eq('branch_id', branch_id);
     queries.push(q8);
 
     // Active services
     let q9 = supabase.from('services').select('*', { count: 'exact', head: true }).eq('is_active', true);
-    // if (barbershop_id) q9 = q9.eq('barbershop_id', barbershop_id); // check if services have branch_id
+    // if (branch_id) q9 = q9.eq('branch_id', branch_id); // check if services have branch_id
     queries.push(q9);
 
     const [
@@ -72,7 +72,7 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       .select('service_id, services(id, name)')
       .eq('status', 'completed')
       .gte('appointment_date', monthStart.toISOString().split('T')[0]);
-    if (barbershop_id) servicesQuery = servicesQuery.eq('branch_id', barbershop_id);
+    if (branch_id) servicesQuery = servicesQuery.eq('branch_id', branch_id);
     
     const { data: serviceData } = await servicesQuery;
     const serviceCounts: Record<string, { name: string; count: number }> = {};
@@ -95,7 +95,7 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       .select('barber_id, barbers(id, name, rating)')
       .in('status', ['completed', 'confirmed'])
       .gte('appointment_date', monthStart.toISOString().split('T')[0]);
-    if (barbershop_id) barbersQuery = barbersQuery.eq('branch_id', barbershop_id);
+    if (branch_id) barbersQuery = barbersQuery.eq('branch_id', branch_id);
 
     const { data: barberData } = await barbersQuery;
     const barberCounts: Record<string, { name: string; count: number; rating: number }> = {};
@@ -134,7 +134,7 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
 
 export async function getAppointmentsByDay(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { barbershop_id, days = '30' } = req.query as Record<string, string>;
+    const { branch_id, days = '30' } = req.query as Record<string, string>;
     const supabase = getSupabaseAdmin();
 
     const daysBack = Math.min(Math.max(parseInt(days), 1), 365);
@@ -147,7 +147,7 @@ export async function getAppointmentsByDay(req: Request, res: Response, next: Ne
       .gte('appointment_date', fromDate.toISOString().split('T')[0])
       .order('appointment_date');
 
-    if (barbershop_id) query = query.eq('branch_id', barbershop_id);
+    if (branch_id) query = query.eq('branch_id', branch_id);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -177,7 +177,7 @@ export async function getAppointmentsByDay(req: Request, res: Response, next: Ne
 
 export async function getOccupancyByBarber(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { barbershop_id, date_from, date_to } = req.query as Record<string, string>;
+    const { branch_id, date_from, date_to } = req.query as Record<string, string>;
     const supabase = getSupabaseAdmin();
 
     const from = date_from ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
@@ -190,7 +190,7 @@ export async function getOccupancyByBarber(req: Request, res: Response, next: Ne
       .lte('appointment_date', to)
       .not('status', 'in', '("cancelled","no_show")');
 
-    if (barbershop_id) query = query.eq('branch_id', barbershop_id);
+    if (branch_id) query = query.eq('branch_id', branch_id);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -234,7 +234,7 @@ export async function getOccupancyByBarber(req: Request, res: Response, next: Ne
 
 export async function getRevenueEstimate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { barbershop_id, month } = req.query as Record<string, string>;
+    const { branch_id, month } = req.query as Record<string, string>;
     const supabase = getSupabaseAdmin();
 
     const targetMonth = month ?? new Date().toISOString().substring(0, 7); // "YYYY-MM"
@@ -249,7 +249,7 @@ export async function getRevenueEstimate(req: Request, res: Response, next: Next
       .gte('appointment_date', from)
       .lte('appointment_date', to);
 
-    if (barbershop_id) query = query.eq('branch_id', barbershop_id);
+    if (branch_id) query = query.eq('branch_id', branch_id);
 
     const { data, error } = await query;
     if (error) throw error;

@@ -22,7 +22,7 @@ export declare function authenticate(req: Request, res: Response, next: NextFunc
 export declare function requireRole(...roles: UserRole[]): (req: Request, res: Response, next: NextFunction) => void;
 /**
  * Ensures the admin can only access resources belonging to their barbershop.
- * Super-admins (no barbershop_id) can access everything.
+ * Super-admins (no branch_id) can access everything.
  */
 export declare function scopeToBarbershop(req: Request, res: Response, next: NextFunction): void;
 //# sourceMappingURL=auth.middleware.d.ts.map

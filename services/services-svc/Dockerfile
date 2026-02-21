@@ -8,6 +8,7 @@ RUN npm install --workspace=packages/shared
 RUN npm install --workspace=services/services-svc
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=services/services-svc
+
 RUN npm prune --production
 
 FROM node:20-alpine AS runner

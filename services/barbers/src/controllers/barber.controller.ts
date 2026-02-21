@@ -21,8 +21,8 @@ export async function listBarbers(req: Request, res: Response, next: NextFunctio
       .order(query.sort_by ?? 'created_at', { ascending: query.sort_order === 'asc' })
       .range(offset, offset + limit - 1);
 
-    if (query.barbershop_id) {
-      dbQuery = dbQuery.eq('branch_id', query.barbershop_id);
+    if (query.branch_id) {
+      dbQuery = dbQuery.eq('branch_id', query.branch_id);
     }
     if (query.search) {
       dbQuery = dbQuery.ilike('name', `%${query.search}%`);
@@ -49,7 +49,7 @@ export async function getBarber(req: Request, res: Response, next: NextFunction)
 
     const { data, error } = await supabase
       .from(TABLE)
-      .select('*, branches(id, name, address, city)')
+      .select('*, branches(id, name, address)')
       .eq('id', id)
       .single();
 
@@ -71,38 +71,24 @@ export async function createBarber(req: Request, res: Response, next: NextFuncti
     const body = req.body as CreateBarberInput;
     const supabase = getSupabaseAdmin();
 
-    // Validate that barbershop exists
     const { data: shop } = await supabase
       .from('branches')
       .select('id')
-      .eq('id', body.barbershop_id)
+      .eq('id', body.branch_id)
       .single();
 
     if (!shop) {
-      res.status(400).json({ success: false, error: 'Barbershop not found' });
-      return;
-    }
-
-    // Validate user exists in Supabase Auth
-    const { data: authUser } = await supabase.auth.admin.getUserById(body.user_id);
-    if (!authUser.user) {
-      res.status(400).json({ success: false, error: 'User not found in auth system' });
+      res.status(400).json({ success: false, error: 'Branch not found' });
       return;
     }
 
     const { data, error } = await supabase
       .from(TABLE)
-      .insert({ ...body, rating: 0, review_count: 0, is_active: true })
+      .insert({ ...body, is_active: true })
       .select()
       .single();
 
     if (error) throw error;
-
-    // Update the user's role to 'barber' in profiles
-    await supabase
-      .from('profiles')
-      .update({ role: 'barber', branch_id: body.barbershop_id })
-      .eq('id', body.user_id);
 
     await auditLog(req, { action: 'create', resource: TABLE, resource_id: data.id, new_value: body });
 

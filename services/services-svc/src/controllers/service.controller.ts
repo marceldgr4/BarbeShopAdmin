@@ -5,7 +5,7 @@ import {
 } from '@barbershop/shared';
 import type { CreateServiceInput, UpdateServiceInput, ListServicesQuery } from '../validators/service.validator';
 
-const TABLE = 'services';
+const TABLE = 'service_categories';
 
 export async function listServices(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -20,7 +20,6 @@ export async function listServices(req: Request, res: Response, next: NextFuncti
       .range(offset, offset + limit - 1);
 
     if (query.search)        dbQuery = dbQuery.ilike('name', `%${query.search}%`);
-    if (query.barbershop_id) dbQuery = dbQuery.eq('branch_id', query.barbershop_id);
     if (query.is_active !== undefined) dbQuery = dbQuery.eq('is_active', query.is_active === 'true');
     if (query.min_price !== undefined) dbQuery = dbQuery.gte('price', query.min_price);
     if (query.max_price !== undefined) dbQuery = dbQuery.lte('price', query.max_price);
@@ -59,12 +58,6 @@ export async function createService(req: Request, res: Response, next: NextFunct
   try {
     const body = req.body as CreateServiceInput;
     const supabase = getSupabaseAdmin();
-
-    const { data: shop } = await supabase.from('branches').select('id').eq('id', body.barbershop_id).single();
-    if (!shop) {
-      res.status(400).json({ success: false, error: 'Barbershop not found' });
-      return;
-    }
 
     const { data, error } = await supabase.from(TABLE).insert(body).select().single();
     if (error) throw error;

@@ -25,9 +25,6 @@ export async function listBarbershops(
     if (query.search) {
       dbQuery = dbQuery.or(`name.ilike.%${query.search}%,address.ilike.%${query.search}%`);
     }
-    if (query.city) {
-      dbQuery = dbQuery.ilike('city', `%${query.city}%`);
-    }
     if (query.is_active !== undefined) {
       dbQuery = dbQuery.eq('is_active', query.is_active === 'true');
     }
@@ -57,8 +54,8 @@ export async function getBarbershop(
       .from(TABLE)
       .select(`
         *,
-        barbers (id, name, is_active, photo_url, rating),
-        services (id, name, price, duration_minutes, is_active)
+        barbers (id, name, is_active, photo_url),
+        service_categories (id, name, price, duration_minutes, is_active)
       `)
       .eq('id', id)
       .single();

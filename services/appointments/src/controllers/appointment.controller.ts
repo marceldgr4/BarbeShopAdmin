@@ -6,7 +6,7 @@ import { z } from 'zod';
 const listAppointmentsSchema = z.object({
   page:          z.coerce.number().positive().default(1),
   limit:         z.coerce.number().min(1).max(100).default(20),
-  barbershop_id: z.string().uuid().optional(),
+  branch_id: z.string().uuid().optional(),
   barber_id:     z.string().uuid().optional(),
   client_id:     z.string().uuid().optional(),
   status:        z.enum(['pending','confirmed','in_progress','completed','cancelled','no_show']).optional(),
@@ -37,7 +37,7 @@ export async function listAppointments(req: Request, res: Response, next: NextFu
       .order('appointment_date', { ascending: query.sort_order === 'asc' })
       .range(offset, offset + limit - 1);
 
-    if (query.barbershop_id) dbQuery = dbQuery.eq('branch_id', query.barbershop_id);
+    if (query.branch_id) dbQuery = dbQuery.eq('branch_id', query.branch_id);
     if (query.barber_id)     dbQuery = dbQuery.eq('barber_id', query.barber_id);
     if (query.client_id)     dbQuery = dbQuery.eq('user_id', query.client_id);
     // if (query.status)        dbQuery = dbQuery.eq('status_id', query.status); // needs status mapping
@@ -152,7 +152,7 @@ export async function updateAppointmentStatus(req: Request, res: Response, next:
 
 export async function getTodayAgenda(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { barbershop_id, barber_id } = req.query as Record<string, string>;
+    const { branch_id, barber_id } = req.query as Record<string, string>;
     const supabase = getSupabaseAdmin();
 
     const today = new Date().toISOString().split('T')[0];
@@ -163,7 +163,7 @@ export async function getTodayAgenda(req: Request, res: Response, next: NextFunc
       .eq('appointment_date', today)
       .order('appointment_time');
 
-    if (barbershop_id) query = query.eq('branch_id', barbershop_id);
+    if (branch_id) query = query.eq('branch_id', branch_id);
     if (barber_id)     query = query.eq('barber_id', barber_id);
 
     const { data, error } = await query;

@@ -10,7 +10,7 @@ export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
-  barbershop_id?: string; // admin scoped to a barbershop
+  branch_id?: string; // admin scoped to a barbershop
 }
 
 // ── Barbershop ────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ export type UpdateBarbershopDto = Partial<CreateBarbershopDto>;
 export interface Barber {
   id: string;
   user_id: string;
-  barbershop_id: string;
+  branch_id: string;
   full_name: string;
   bio?: string;
   specialties: string[];
@@ -55,19 +55,19 @@ export interface Barber {
 
 export type CreateBarberDto = {
   user_id: string;
-  barbershop_id: string;
+  branch_id: string;
   full_name: string;
   bio?: string;
   specialties?: string[];
   avatar_url?: string;
 };
-export type UpdateBarberDto = Partial<Omit<CreateBarberDto, 'user_id' | 'barbershop_id'>>;
+export type UpdateBarberDto = Partial<Omit<CreateBarberDto, 'user_id' | 'branch_id'>>;
 
 // ── Service (haircut service) ─────────────────────────────────────────────────
 
 export interface Service {
   id: string;
-  barbershop_id: string;
+  branch_id: string;
   name: string;
   description?: string;
   duration_minutes: number;
@@ -88,7 +88,7 @@ export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday
 export interface BarberSchedule {
   id: string;
   barber_id: string;
-  barbershop_id: string;
+  branch_id: string;
   weekday: Weekday;
   start_time: string;   // "09:00"
   end_time: string;     // "18:00"
@@ -131,7 +131,7 @@ export interface Appointment {
   id: string;
   client_id: string;
   barber_id: string;
-  barbershop_id: string;
+  branch_id: string;
   service_id: string;
   scheduled_at: string;   // ISO datetime
   duration_minutes: number;

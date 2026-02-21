@@ -9,12 +9,12 @@ import type {
 
 export async function getBarberSchedules(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { barber_id, barbershop_id } = req.query as Record<string, string>;
+    const { barber_id, branch_id } = req.query as Record<string, string>;
     const supabase = getSupabaseAdmin();
 
     let query = supabase.from('barber_schedules').select('*').order('weekday');
     if (barber_id)     query = query.eq('barber_id', barber_id);
-    if (barbershop_id) query = query.eq('barbershop_id', barbershop_id);
+    if (branch_id) query = query.eq('branch_id', branch_id);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -87,7 +87,7 @@ export async function bulkUpsertSchedule(req: Request, res: Response, next: Next
 
     const rows = body.schedules.map((s) => ({
       barber_id:     body.barber_id,
-      barbershop_id: body.barbershop_id,
+      branch_id: body.branch_id,
       weekday:       s.weekday,
       start_time:    s.start_time,
       end_time:      s.end_time,
@@ -221,7 +221,7 @@ export async function deleteDayOff(req: Request, res: Response, next: NextFuncti
  */
 export async function getAvailableSlots(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { barber_id, barbershop_id, date, service_duration } = req.query as unknown as AvailabilityQuery;
+    const { barber_id, branch_id, date, service_duration } = req.query as unknown as AvailabilityQuery;
     const supabase = getSupabaseAdmin();
 
     const targetDate = new Date(date + 'T00:00:00');

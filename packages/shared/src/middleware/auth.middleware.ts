@@ -56,7 +56,7 @@ export async function authenticate(
     const supabase = getSupabaseAdmin();
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('id, email, role, barbershop_id')
+      .select('id, email, role, branch_id')
       .eq('id', decoded.sub)
       .single();
 
@@ -69,7 +69,7 @@ export async function authenticate(
       id: profile.id,
       email: profile.email,
       role: profile.role as UserRole,
-      barbershop_id: profile.barbershop_id,
+      branch_id: profile.branch_id,
     };
 
     next();
@@ -116,7 +116,7 @@ export function requireRole(...roles: UserRole[]) {
 
 /**
  * Ensures the admin can only access resources belonging to their barbershop.
- * Super-admins (no barbershop_id) can access everything.
+ * Super-admins (no branch_id) can access everything.
  */
 export function scopeToBarbershop(
   req: Request,
@@ -129,8 +129,8 @@ export function scopeToBarbershop(
   }
 
   // If the admin is scoped to a barbershop, inject it into the query
-  if (req.user.barbershop_id) {
-    req.query.barbershop_id = req.user.barbershop_id;
+  if (req.user.branch_id) {
+    req.query.branch_id = req.user.branch_id;
   }
 
   next();

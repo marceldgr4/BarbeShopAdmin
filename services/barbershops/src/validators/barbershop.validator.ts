@@ -2,17 +2,12 @@ import { z } from 'zod';
 
 export const createBarbershopSchema = z.object({
   name:          z.string().min(2).max(100),
-  description:   z.string().max(500).optional(),
   address:       z.string().min(5).max(200),
-  city:          z.string().min(2).max(100).optional(),
   phone:         z.string().regex(/^\+?[\d\s\-()]{7,20}$/, 'Invalid phone number').optional(),
   email:         z.string().email().optional(),
   latitude:      z.number().min(-90).max(90).optional(),
   longitude:     z.number().min(-180).max(180).optional(),
-  opening_time:  z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:MM').optional(),
-  closing_time:  z.string().regex(/^\d{2}:\d{2}$/, 'Format must be HH:MM').optional(),
   is_active:     z.boolean().default(true).optional(),
-  cover_image_url: z.string().url().optional(),
 });
 
 export const updateBarbershopSchema = createBarbershopSchema.partial();
@@ -21,9 +16,8 @@ export const listBarbershopsSchema = z.object({
   page:       z.coerce.number().positive().default(1),
   limit:      z.coerce.number().min(1).max(100).default(20),
   search:     z.string().optional(),
-  city:       z.string().optional(),
   is_active:  z.enum(['true', 'false']).optional(),
-  sort_by:    z.enum(['name', 'city', 'created_at']).default('created_at'),
+  sort_by:    z.enum(['name', 'created_at']).default('created_at'),
   sort_order: z.enum(['asc', 'desc']).default('desc'),
 });
 

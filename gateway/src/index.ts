@@ -95,7 +95,7 @@ function proxyTo(target: string, pathRewrite?: string) {
           const user = (srcReq as express.Request).user!;
           proxyReqOpts.headers['x-user-id']            = user.id;
           proxyReqOpts.headers['x-user-role']          = user.role;
-          proxyReqOpts.headers['x-user-barbershop-id'] = user.barbershop_id ?? '';
+          proxyReqOpts.headers['x-user-barbershop-id'] = user.branch_id ?? '';
         }
       }
       return proxyReqOpts;

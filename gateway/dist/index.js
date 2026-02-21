@@ -3,7 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-require("dotenv/config");
+const path_1 = __importDefault(require("path"));
+const dotenv_1 = __importDefault(require("dotenv"));
+// Load .env from root
+dotenv_1.default.config({ path: path_1.default.join(__dirname, '../../.env') });
 const express_1 = __importDefault(require("express"));
 const express_http_proxy_1 = __importDefault(require("express-http-proxy"));
 const cors_1 = __importDefault(require("cors"));
@@ -24,12 +27,13 @@ const SERVICES = {
 };
 // ── Security ──────────────────────────────────────────────────────────────────
 app.use((0, helmet_1.default)());
+const isDev = process.env.NODE_ENV === 'development';
 const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(',');
 app.use((0, cors_1.default)({
-    origin: corsOrigins,
+    origin: isDev ? true : corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-dev-bypass'],
 }));
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 const globalLimiter = (0, express_rate_limit_1.default)({
@@ -78,7 +82,7 @@ function proxyTo(target, pathRewrite) {
                     const user = srcReq.user;
                     proxyReqOpts.headers['x-user-id'] = user.id;
                     proxyReqOpts.headers['x-user-role'] = user.role;
-                    proxyReqOpts.headers['x-user-barbershop-id'] = user.barbershop_id ?? '';
+                    proxyReqOpts.headers['x-user-barbershop-id'] = user.branch_id ?? '';
                 }
             }
             return proxyReqOpts;
@@ -108,6 +112,7 @@ app.use(shared_1.errorHandler);
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
     console.log(`🚀 API Gateway running on http://localhost:${PORT}`);
+    console.log(`   Mode: ${process.env.NODE_ENV}`);
     console.log(`   Services: ${JSON.stringify(SERVICES, null, 2)}`);
 });
 exports.default = app;

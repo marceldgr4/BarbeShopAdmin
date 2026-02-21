@@ -5,8 +5,8 @@ import { barbersApi, barbershopsApi } from '../api/api';
 export const BarbersManager = () => {
   const [barbers, setBarbers] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setLoading] = useState(true);
+  const [, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<any>(null);
   const [formData, setFormData] = useState({

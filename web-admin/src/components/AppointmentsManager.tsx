@@ -4,7 +4,7 @@ import { appointmentsApi } from '../api/api';
 
 export const AppointmentsManager = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   const fetchAppointments = async () => {
     try {
@@ -33,8 +33,8 @@ export const AppointmentsManager = () => {
     }
   };
 
-  const getStatusStyle = (status: string) => {
-    // Note: status is a UUID now. Ideally we should join with statuses table.
+  const getStatusStyle = (_status: string) => {
+    // Note: is a UUID now. Ideally we should join with statuses table.
     return 'bg-blue-500/20 text-blue-400';
   };
 
@@ -83,7 +83,7 @@ export const AppointmentsManager = () => {
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex justify-end gap-2 text-sm">
-                      {apt.status === 'pending' && (
+                      {apt.status_id === 'pending' && (
                         <button 
                           onClick={() => handleStatusUpdate(apt.id, 'confirmed')}
                           className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
@@ -91,7 +91,7 @@ export const AppointmentsManager = () => {
                           <CheckCircle size={16} /> Confirmar
                         </button>
                       )}
-                      {apt.status !== 'cancelled' && apt.status !== 'completed' && (
+                      {apt.status_id !== 'cancelled' && apt.status_id !== 'completed' && (
                         <button 
                           onClick={() => handleStatusUpdate(apt.id, 'cancelled')}
                           className="flex items-center gap-1 text-red-400 hover:text-red-300"

@@ -18,7 +18,7 @@ router
 router
   .route('/:id')
   .get(getBarber)
-  .put(validateBody(createBarberSchema.omit({ user_id: true, barbershop_id: true })), updateBarber)
+  .put(validateBody(createBarberSchema.omit({ branch_id: true })), updateBarber)
   .patch(validateBody(updateBarberSchema), updateBarber)
   .delete(deleteBarber);
 
