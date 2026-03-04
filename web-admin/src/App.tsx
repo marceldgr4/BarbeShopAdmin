@@ -1,29 +1,30 @@
-import { useState, useEffect } from 'react';
-import { 
-  BarChart3, 
-  Store, 
-  Users, 
-  Calendar, 
-  Settings, 
-  LogOut, 
+import { useState, useEffect, type FormEvent } from 'react';
+import {
+  BarChart3,
+  Store,
+  Users,
+  Calendar,
+  Settings,
+  LogOut,
   Scissors,
   Menu,
   X,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck,
 } from 'lucide-react';
-import { dashboardApi } from './api/api';
+import { authApi, authStorage, dashboardApi } from './api/api';
 import { BarbershopsManager } from './components/BarbershopsManager';
 import { BarbersManager } from './components/BarbersManager';
 import { ServicesManager } from './components/ServicesManager';
 import { AppointmentsManager } from './components/AppointmentsManager';
 
 const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any, label: string, active?: boolean, onClick?: () => void }) => (
-  <button 
+  <button
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-      active 
-        ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' 
+      active
+        ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20'
         : 'text-slate-400 hover:bg-slate-800 hover:text-white'
     }`}
   >
@@ -32,12 +33,105 @@ const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any
   </button>
 );
 
+const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await authApi.login(email, password);
+      const payload = response.data?.data || response.data;
+      const token = payload?.token || payload?.accessToken;
+
+      if (!token) {
+        throw new Error('La respuesta del servidor no incluye token de sesión.');
+      }
+
+      authStorage.setToken(token);
+      authStorage.setUser(payload?.user || { email, role: 'admin' });
+      onLoginSuccess();
+    } catch (err: any) {
+      console.error('Error during admin login:', err);
+      const message = err.response?.data?.message || 'No se pudo iniciar sesión. Verifica tus credenciales de administrador.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl shadow-slate-950/60">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="bg-primary-600 p-2 rounded-xl">
+            <ShieldCheck size={24} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Acceso Administrador</h1>
+            <p className="text-sm text-slate-400">Inicia sesión para gestionar la plataforma.</p>
+          </div>
+        </div>
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div>
+            <label className="block text-sm text-slate-300 mb-2">Correo electrónico</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="admin@barbershop.com"
+              autoComplete="email"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-300 mb-2">Contraseña</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="••••••••"
+              autoComplete="current-password"
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/40 text-red-300 text-sm px-4 py-3 rounded-xl">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-primary-600 hover:bg-primary-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors"
+          >
+            {loading ? 'Ingresando...' : 'Iniciar sesión'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(authStorage.getToken()));
+  const [adminUser, setAdminUser] = useState<any>(authStorage.getUser());
 
   const fetchDashboardData = async () => {
     try {
@@ -49,6 +143,10 @@ function App() {
       }
     } catch (err: any) {
       console.error('Error fetching dashboard stats:', err);
+      if (err.response?.status === 401) {
+        handleLogout();
+        return;
+      }
       setError('No se pudieron cargar los datos del dashboard. Verifica que el backend esté corriendo.');
     } finally {
       setLoading(false);
@@ -56,10 +154,24 @@ function App() {
   };
 
   useEffect(() => {
-    if (activeTab === 'dashboard') {
+    if (isAuthenticated && activeTab === 'dashboard') {
       fetchDashboardData();
     }
-  }, [activeTab]);
+  }, [activeTab, isAuthenticated]);
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+    setAdminUser(authStorage.getUser());
+    setActiveTab('dashboard');
+  };
+
+  const handleLogout = () => {
+    authStorage.clearSession();
+    setIsAuthenticated(false);
+    setAdminUser(null);
+    setStats(null);
+    setError(null);
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -78,7 +190,6 @@ function App() {
               </div>
             )}
 
-            {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               {[
                 { label: 'Total Barberos', value: stats?.active_barbers || '0', change: 'Live', color: 'text-emerald-400' },
@@ -103,7 +214,6 @@ function App() {
               ))}
             </div>
 
-            {/* Detailed Content */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
@@ -155,17 +265,20 @@ function App() {
       default:
         return (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center min-h-[400px]">
-             <Settings className="text-slate-500 mb-4" size={48} />
-             <h3 className="text-xl font-bold mb-2 text-white">Configuración</h3>
-             <p className="text-slate-500">Esta sección estará disponible próximamente.</p>
+            <Settings className="text-slate-500 mb-4" size={48} />
+            <h3 className="text-xl font-bold mb-2 text-white">Configuración</h3>
+            <p className="text-slate-500">Esta sección estará disponible próximamente.</p>
           </div>
         );
     }
   };
 
+  if (!isAuthenticated) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 w-full">
-      {/* Sidebar */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-slate-900 border-r border-slate-800 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 flex items-center gap-3">
           <div className="bg-primary-600 p-2 rounded-xl shadow-lg shadow-primary-900/20">
@@ -177,57 +290,31 @@ function App() {
         </div>
 
         <nav className="px-4 space-y-2 flex-1">
-          <SidebarItem 
-            icon={BarChart3} 
-            label="Dashboard" 
-            active={activeTab === 'dashboard'} 
-            onClick={() => setActiveTab('dashboard')} 
-          />
-          <SidebarItem 
-            icon={Store} 
-            label="Barberías" 
-            active={activeTab === 'barbershops'} 
-            onClick={() => setActiveTab('barbershops')} 
-          />
-          <SidebarItem 
-            icon={Users} 
-            label="Barberos" 
-            active={activeTab === 'barbers'} 
-            onClick={() => setActiveTab('barbers')} 
-          />
-           <SidebarItem 
-            icon={Scissors} 
-            label="Servicios" 
-            active={activeTab === 'services'} 
-            onClick={() => setActiveTab('services')} 
-          />
-          <SidebarItem 
-            icon={Calendar} 
-            label="Citas" 
-            active={activeTab === 'appointments'} 
-            onClick={() => setActiveTab('appointments')} 
-          />
+          <SidebarItem icon={BarChart3} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          <SidebarItem icon={Store} label="Barberías" active={activeTab === 'barbershops'} onClick={() => setActiveTab('barbershops')} />
+          <SidebarItem icon={Users} label="Barberos" active={activeTab === 'barbers'} onClick={() => setActiveTab('barbers')} />
+          <SidebarItem icon={Scissors} label="Servicios" active={activeTab === 'services'} onClick={() => setActiveTab('services')} />
+          <SidebarItem icon={Calendar} label="Citas" active={activeTab === 'appointments'} onClick={() => setActiveTab('appointments')} />
         </nav>
 
         <div className="p-4 mt-auto border-t border-slate-800">
           <SidebarItem icon={Settings} label="Configuración" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
-          <SidebarItem icon={LogOut} label="Cerrar Sesión" />
+          <SidebarItem icon={LogOut} label="Cerrar Sesión" onClick={handleLogout} />
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur-md sticky top-0 z-40">
-          <button 
+          <button
             className="lg:hidden text-slate-400"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
             {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
-          
+
           <div className="flex items-center gap-4">
             {activeTab === 'dashboard' && (
-              <button 
+              <button
                 onClick={fetchDashboardData}
                 disabled={loading}
                 className="p-2 text-slate-400 hover:text-white transition-colors"
@@ -237,11 +324,11 @@ function App() {
               </button>
             )}
             <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-white">Admin User</p>
-              <p className="text-xs text-slate-500">Super Admin</p>
+              <p className="text-sm font-medium text-white">{adminUser?.full_name || adminUser?.name || adminUser?.email || 'Admin User'}</p>
+              <p className="text-xs text-slate-500">{adminUser?.role || 'Super Admin'}</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-primary-400 font-bold">
-              AD
+              {(adminUser?.full_name || adminUser?.name || 'AD').toString().slice(0, 2).toUpperCase()}
             </div>
           </div>
         </header>
