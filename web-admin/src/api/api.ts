@@ -7,6 +7,35 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const enableDevBypass = import.meta.env.VITE_ENABLE_DEV_BYPASS === 'true';
 
+function getAuthErrorMessage(error: any): string {
+  const rawMessage = error?.response?.data?.error_description
+    || error?.response?.data?.msg
+    || error?.response?.data?.message
+    || error?.message;
+
+  if (!rawMessage) return 'No se pudo iniciar sesión.';
+
+  const normalized = String(rawMessage).toLowerCase();
+
+  if (normalized.includes('invalid login credentials')) {
+    return 'Credenciales inválidas. Verifica correo y contraseña.';
+  }
+
+  if (normalized.includes('email not confirmed')) {
+    return 'El correo no está confirmado en Supabase. Confírmalo e intenta de nuevo.';
+  }
+
+  if (normalized.includes('faltan vite_supabase_url') || normalized.includes('vite_supabase_anon_key')) {
+    return 'Falta configurar VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en web-admin/.env.';
+  }
+
+  if (normalized.includes('network error') || normalized.includes('failed to fetch')) {
+    return 'No se pudo conectar con Supabase. Revisa la URL, CORS y tu conexión.';
+  }
+
+  return String(rawMessage);
+}
+
 const api = axios.create({
   baseURL: 'http://localhost:3000/api/admin/',
   headers: {
@@ -41,8 +70,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-
-
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -59,23 +86,30 @@ export const authApi = {
       throw new Error('Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en web-admin/.env');
     }
 
-    const response = await axios.post(
-      `${supabaseUrl}/auth/v1/token?grant_type=password`,
-      { email, password },
+    const normalizedEmail = email.trim().toLowerCase();
+
+    let response;
+
+    try {
+      response = await axios.post(
+        `${supabaseUrl}/auth/v1/token?grant_type=password`,
+        { email: normalizedEmail, password },
       {
         headers: {
           apikey: supabaseAnonKey,
           'Content-Type': 'application/json',
         },
-      }
-    );
+        }
+      );
+    } catch (error) {
+      throw new Error(getAuthErrorMessage(error));
+    }
 
     return {
       token: response.data.access_token,
       user: response.data.user,
     };
   },
-
 };
 
 export const dashboardApi = {
