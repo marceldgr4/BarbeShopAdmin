@@ -76,6 +76,47 @@ supabase-migration.sql
 
 Esto crea todas las tablas, índices, RLS y funciones RPC.
 
+
+### 2.1 Crear usuario administrador en Supabase (obligatorio para login web)
+
+> Guía completa paso a paso: `docs/supabase-admin-setup.md`.
+
+
+
+El login del Web Admin usa **Supabase Auth** (email/password).  
+Primero crea el usuario en **Authentication > Users**.
+
+Luego asígnale permisos admin según tu esquema:
+
+- Esquema A: `profiles.role = 'admin'`.
+- Esquema B: registrar en `admin_users` con rol `admin` en `roles`.
+
+Ejemplo rápido (esquema A):
+
+```sql
+update profiles
+set role = 'admin',
+    updated_at = now()
+where email = 'admin@tu-dominio.com';
+```
+
+Ejemplo rápido (esquema B):
+
+```sql
+insert into roles (role_name, description)
+values ('admin', 'Administrador del panel')
+on conflict (role_name) do nothing;
+
+insert into admin_users (user_id, role_id, branch_id)
+select u.id, r.id, null
+from auth.users u
+join roles r on r.role_name = 'admin'
+where u.email = 'admin@tu-dominio.com'
+on conflict (user_id)
+do update set role_id = excluded.role_id,
+              branch_id = excluded.branch_id;
+```
+
 ### 3. Desarrollo local con Docker
 
 La forma recomendada de trabajar en todo el ecosistema (Frontend y Microservicios Backend) es usando Docker Compose.
