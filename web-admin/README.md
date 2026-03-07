@@ -71,3 +71,21 @@ export default defineConfig([
   },
 ])
 ```
+
+
+## Variables de entorno para login admin
+
+Crea un archivo `web-admin/.env` a partir de `web-admin/.env.example`:
+
+```bash
+cp web-admin/.env.example web-admin/.env
+```
+
+Asegúrate de definir:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Sin esas variables no se podrá iniciar sesión en el panel admin.
+
+Para crear/promover el usuario admin en Supabase revisa: `../docs/supabase-admin-setup.md`.
+

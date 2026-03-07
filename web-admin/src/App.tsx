@@ -45,6 +45,7 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
     setError(null);
 
     try {
+      const { token, user } = await authApi.login(email, password);
       const response = await authApi.login(email, password);
       const payload = response.data?.data || response.data;
       const token = payload?.token || payload?.accessToken;
@@ -54,6 +55,11 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
       }
 
       authStorage.setToken(token);
+      authStorage.setUser(user || { email, role: 'admin' });
+      onLoginSuccess();
+    } catch (err: any) {
+      console.error('Error during admin login:', err);
+      const message = err.response?.data?.error_description || err.response?.data?.msg || err.response?.data?.message || 'No se pudo iniciar sesión. Verifica tus credenciales de administrador.';
       authStorage.setUser(payload?.user || { email, role: 'admin' });
       onLoginSuccess();
     } catch (err: any) {
@@ -145,6 +151,10 @@ function App() {
       console.error('Error fetching dashboard stats:', err);
       if (err.response?.status === 401) {
         handleLogout();
+        return;
+      }
+      if (err.response?.status === 403) {
+        setError('Tu usuario existe pero no tiene permisos admin. Asigna rol admin en profiles o crea su registro en admin_users + roles en Supabase.');
         return;
       }
       setError('No se pudieron cargar los datos del dashboard. Verifica que el backend esté corriendo.');
