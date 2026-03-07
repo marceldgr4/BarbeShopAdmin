@@ -41,6 +41,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export const authStorage = {
+  getToken: () => localStorage.getItem(TOKEN_STORAGE_KEY),
+  setToken: (token: string) => localStorage.setItem(TOKEN_STORAGE_KEY, token),
+  clearToken: () => localStorage.removeItem(TOKEN_STORAGE_KEY),
+  getUser: () => {
+    const rawUser = localStorage.getItem(USER_STORAGE_KEY);
+    return rawUser ? JSON.parse(rawUser) : null;
+  },
+  setUser: (user: any) => localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user)),
+  clearUser: () => localStorage.removeItem(USER_STORAGE_KEY),
+  clearSession: () => {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
+  },
+};
+
+api.interceptors.request.use((config) => {
+  const token = authStorage.getToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -73,6 +99,7 @@ export const authApi = {
       user: response.data.user,
     };
   },
+  login: (email: string, password: string) => api.post('auth/login', { email, password }),
 };
 
 export const dashboardApi = {

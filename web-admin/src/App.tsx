@@ -46,6 +46,9 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
     try {
       const { token, user } = await authApi.login(email, password);
+      const response = await authApi.login(email, password);
+      const payload = response.data?.data || response.data;
+      const token = payload?.token || payload?.accessToken;
 
       if (!token) {
         throw new Error('La respuesta del servidor no incluye token de sesión.');
@@ -57,6 +60,11 @@ const LoginScreen = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
     } catch (err: any) {
       console.error('Error during admin login:', err);
       const message = err.response?.data?.error_description || err.response?.data?.msg || err.response?.data?.message || 'No se pudo iniciar sesión. Verifica tus credenciales de administrador.';
+      authStorage.setUser(payload?.user || { email, role: 'admin' });
+      onLoginSuccess();
+    } catch (err: any) {
+      console.error('Error during admin login:', err);
+      const message = err.response?.data?.message || 'No se pudo iniciar sesión. Verifica tus credenciales de administrador.';
       setError(message);
     } finally {
       setLoading(false);
