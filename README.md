@@ -95,8 +95,7 @@ Ejemplo rápido (esquema A):
 
 ```sql
 update profiles
-set role = 'admin',
-    updated_at = now()
+set role = 'admin'
 where email = 'admin@tu-dominio.com';
 ```
 
@@ -116,6 +115,8 @@ on conflict (user_id)
 do update set role_id = excluded.role_id,
               branch_id = excluded.branch_id;
 ```
+
+Script recomendado (auto-detecta ambos esquemas): `docs/sql/grant-admin-role.sql`.
 
 ### 3. Desarrollo local con Docker
 
