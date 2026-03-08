@@ -112,6 +112,10 @@ services:
     build:
       context: ./web-admin
       dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_ENABLE_DEV_BYPASS: ${VITE_ENABLE_DEV_BYPASS:-false}
     ports:
       - "8080:80"
     networks:
