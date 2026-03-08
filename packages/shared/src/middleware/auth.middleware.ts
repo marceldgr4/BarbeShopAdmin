@@ -72,8 +72,15 @@ export async function authenticate(
       return;
     }
 
-    // Fetch the user's metadata from Supabase to get role
+    // Fetch role metadata from Supabase (supports both schemas)
     const supabase = getSupabaseAdmin();
+
+    const fallbackEmail = (decoded.email as string | undefined) || '';
+    let resolvedUser: AuthUser = {
+      id: userId,
+      email: fallbackEmail,
+      role: 'client',
+    };
 
     // Schema A: profiles(id, email, role, branch_id)
     const profileResult = await supabase
@@ -83,18 +90,17 @@ export async function authenticate(
       .maybeSingle();
 
     if (!profileResult.error && profileResult.data) {
-      req.user = {
+      const profileRole = mapRoleFromAdminTable(profileResult.data.role as string | null | undefined);
+      resolvedUser = {
         id: profileResult.data.id,
-        email: profileResult.data.email,
-        role: profileResult.data.role as UserRole,
-        branch_id: profileResult.data.branch_id,
+        email: profileResult.data.email || fallbackEmail,
+        role: profileRole,
+        branch_id: profileResult.data.branch_id || undefined,
       };
-
-      next();
-      return;
     }
 
     // Schema B: admin_users(user_id, role_id, branch_id) + roles(role_name)
+    // Priority: if this table says admin, it overrides profile role.
     const adminResult = await supabase
       .from('admin_users')
       .select('user_id, branch_id, roles:role_id(role_name)')
@@ -104,23 +110,17 @@ export async function authenticate(
     if (!adminResult.error && adminResult.data) {
       const mappedRole = mapRoleFromAdminTable((adminResult.data as any).roles?.role_name);
 
-      req.user = {
-        id: adminResult.data.user_id,
-        email: (decoded.email as string | undefined) || '',
-        role: mappedRole,
-        branch_id: adminResult.data.branch_id || undefined,
-      };
-
-      next();
-      return;
+      if (mappedRole === 'admin' || !profileResult.data) {
+        resolvedUser = {
+          id: adminResult.data.user_id,
+          email: fallbackEmail,
+          role: mappedRole,
+          branch_id: adminResult.data.branch_id || undefined,
+        };
+      }
     }
 
-    // If user exists in auth but not in role tables, authenticate as client.
-    req.user = {
-      id: userId,
-      email: (decoded.email as string | undefined) || '',
-      role: 'client',
-    };
+    req.user = resolvedUser;
 
     next();
   } catch (err) {

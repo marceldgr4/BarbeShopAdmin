@@ -20,8 +20,7 @@ Primero debes crear el usuario en Supabase Auth y luego asignarle permisos admin
 
 ```sql
 update profiles
-set role = 'admin',
-    updated_at = now()
+set role = 'admin'
 where email = 'admin@tu-dominio.com';
 ```
 
@@ -45,6 +44,15 @@ do update set role_id = excluded.role_id,
 ```
 
 > Si quieres limitar el admin a una sola sucursal, en vez de `null` usa el UUID de `branches.id` en `branch_id`.
+
+
+### Opción C — script único (detecta ambos esquemas)
+
+Si prefieres correr un solo SQL que cubre `profiles(role)` y `admin_users + roles`, usa:
+
+- `docs/sql/grant-admin-role.sql`
+
+Solo cambia el valor de `target_email` (y el email del query final de verificación) antes de ejecutar.
 
 ## 3) Verificar permisos
 
